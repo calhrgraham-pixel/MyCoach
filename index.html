@@ -818,6 +818,8 @@
   }
 
   // ── Saved Plans ──────────────────────────────────────────────────────────
+  let savedPlansCache = [];
+
   function togglePlansDrawer() {
     const drawer = document.getElementById('plans-drawer');
     drawer.classList.toggle('open');
@@ -843,26 +845,24 @@
       return;
     }
 
-    list.innerHTML = data.map(p => `
+    savedPlansCache = data;
+
+    list.innerHTML = data.map((p, i) => `
       <div class="plan-item">
         <div class="plan-item-info">
           <div class="plan-item-title">${esc(p.plan_title)}</div>
           <div class="plan-item-date">${new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
         </div>
         <div class="plan-item-actions">
-          <button class="btn-load"   onclick="loadPlan(${JSON.stringify(esc(p.id))})">Load</button>
-          <button class="btn-delete" onclick="deletePlan(${JSON.stringify(esc(p.id))}, this)">Delete</button>
+          <button class="btn-load"   onclick="loadPlan(${i})">Load</button>
+          <button class="btn-delete" onclick="deletePlan(${i}, this)">Delete</button>
         </div>
       </div>
     `).join('');
-
-    // Store data for lookup by id
-    list._data = data;
   }
 
-  async function loadPlan(id) {
-    const list = document.getElementById('plans-list');
-    const entry = (list._data || []).find(p => p.id === id);
+  function loadPlan(index) {
+    const entry = savedPlansCache[index];
     if (!entry) return;
 
     // Restore form inputs if available
@@ -882,11 +882,14 @@
     document.getElementById('plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function deletePlan(id, btn) {
+  async function deletePlan(index, btn) {
+    const entry = savedPlansCache[index];
+    if (!entry) return;
+
     btn.disabled = true;
     btn.textContent = '…';
 
-    const { error } = await sb.from('workout_plans').delete().eq('id', id);
+    const { error } = await sb.from('workout_plans').delete().eq('id', entry.id);
     if (error) {
       btn.disabled = false;
       btn.textContent = 'Delete';
