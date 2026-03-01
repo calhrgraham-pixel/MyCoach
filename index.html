@@ -10,6 +10,8 @@
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script>
     const SUPABASE_URL      = 'https://tumjismjllgzcyuvcznk.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bWppc21qbGxnemN5dXZjem5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODMwNTAsImV4cCI6MjA4Nzk1OTA1MH0.qgqFhPr0holR8U39AodAmFHYvb_iIj3sdpKdXavCqAY';
@@ -775,6 +777,61 @@
 
     .history-empty { padding: 24px; font-size: 13px; color: #444; text-align: center; }
 
+    /* ── Progress Tab ────────────────────────────────────────────────────── */
+    .metric-btns { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+
+    .metric-btn {
+      background: transparent;
+      border: 1px solid #222;
+      border-radius: 2px;
+      color: #555;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      padding: 7px 16px;
+      text-transform: uppercase;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .metric-btn:hover { border-color: #444; color: #aaa; }
+    .metric-btn.active { background: #ff5000; border-color: #ff5000; color: #fff; }
+
+    .progress-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: #0d0d0d;
+      border: 1px solid #1a1a1a;
+      border-radius: 2px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 0.04em;
+      color: #f0ede8;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #444;
+    }
+
+    .chart-wrap { position: relative; height: 300px; }
+
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .tips-grid { grid-template-columns: 1fr; }
@@ -782,6 +839,7 @@
       .tracker-card { padding: 20px; }
       .tracker-top-row { grid-template-columns: 1fr; }
       .set-header-row, .set-row { grid-template-columns: 28px 1fr 1fr 70px 24px; }
+      .progress-stats { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -842,6 +900,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-btn-build" onclick="switchTab('build')">Build Program</button>
     <button class="tab-btn" id="tab-btn-track" onclick="switchTab('track')">Track Workouts</button>
+    <button class="tab-btn" id="tab-btn-progress" onclick="switchTab('progress')">Progress</button>
   </div>
 
   <!-- ── BUILD PROGRAM TAB ─────────────────────────────────────────────── -->
@@ -941,6 +1000,45 @@
     </div>
   </div>
 
+  <!-- ── PROGRESS TAB ─────────────────────────────────────────────────── -->
+  <div id="tab-progress" style="display:none">
+    <div class="tracker-card">
+      <div class="section-label">Exercise Progress</div>
+
+      <div id="progress-login-prompt" class="tracker-login-prompt" style="display:none">
+        Sign in above to view your progress charts.
+      </div>
+
+      <div id="progress-content">
+        <div class="form-group" style="margin-bottom:20px">
+          <label for="progress-exercise-select">Exercise</label>
+          <select id="progress-exercise-select" onchange="loadProgressChart()">
+            <option value="">— Select an exercise —</option>
+          </select>
+        </div>
+
+        <div class="metric-btns">
+          <button class="metric-btn active" onclick="setMetric('weight', this)">Max Weight</button>
+          <button class="metric-btn" onclick="setMetric('orm', this)">Est. 1RM</button>
+          <button class="metric-btn" onclick="setMetric('volume', this)">Volume</button>
+        </div>
+
+        <div class="progress-stats" id="progress-stats" style="display:none"></div>
+
+        <div class="chart-wrap">
+          <canvas id="progress-chart"></canvas>
+        </div>
+
+        <div class="history-empty" id="progress-empty" style="display:none">
+          No data yet for this exercise. Log some sessions in the Track tab first!
+        </div>
+        <div class="history-empty" id="progress-placeholder">
+          Select an exercise above to see your progress chart.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── TRACK WORKOUTS TAB ────────────────────────────────────────────── -->
   <div id="tab-track" style="display:none">
 
@@ -996,16 +1094,23 @@
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   function switchTab(name) {
-    document.getElementById('tab-build').style.display = name === 'build' ? 'block' : 'none';
-    document.getElementById('tab-track').style.display = name === 'track' ? 'block' : 'none';
-    document.getElementById('tab-btn-build').classList.toggle('active', name === 'build');
-    document.getElementById('tab-btn-track').classList.toggle('active', name === 'track');
+    ['build', 'track', 'progress'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+      document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+    });
     if (name === 'track') {
       if (currentUser) loadHistory();
       else {
         document.getElementById('tracker-login-prompt').style.display = 'block';
         document.getElementById('tracker-setup-form').style.display   = 'none';
         document.getElementById('session-logger').style.display       = 'none';
+      }
+    }
+    if (name === 'progress') {
+      if (currentUser) loadExerciseList();
+      else {
+        document.getElementById('progress-login-prompt').style.display = 'block';
+        document.getElementById('progress-content').style.display      = 'none';
       }
     }
   }
@@ -1021,9 +1126,11 @@
       loggedIn.style.display  = 'block';
       document.getElementById('user-email-display').textContent = currentUser.email;
       if (currentPlan) saveBtn.classList.add('logged-in');
-      // Show tracker form
+      // Show tracker + progress forms
       document.getElementById('tracker-login-prompt').style.display = 'none';
       document.getElementById('tracker-setup-form').style.display   = 'block';
+      document.getElementById('progress-login-prompt').style.display = 'none';
+      document.getElementById('progress-content').style.display      = 'block';
     } else {
       loggedOut.style.display = 'block';
       loggedIn.style.display  = 'none';
@@ -1629,6 +1736,185 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
       .replace(/"/g, '&quot;');
   }
 
+  // ── Progress Charts ──────────────────────────────────────────────────────
+  let progressChart   = null;
+  let currentMetric   = 'weight';
+  let progressData    = [];
+
+  function setMetric(metric, btn) {
+    currentMetric = metric;
+    document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderProgressChart();
+  }
+
+  async function loadExerciseList() {
+    if (!currentUser) return;
+    const { data, error } = await sb
+      .from('workout_entries')
+      .select('exercise_name')
+      .not('weight', 'is', null);
+
+    if (error || !data) return;
+
+    const names = [...new Set(data.map(r => r.exercise_name))].sort();
+    const sel = document.getElementById('progress-exercise-select');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Select an exercise —</option>';
+    names.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n;
+      if (n === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    if (current && names.includes(current)) loadProgressChart();
+  }
+
+  async function loadProgressChart() {
+    const exerciseName = document.getElementById('progress-exercise-select').value;
+    const placeholder  = document.getElementById('progress-placeholder');
+    const emptyMsg     = document.getElementById('progress-empty');
+    const statsEl      = document.getElementById('progress-stats');
+
+    if (!exerciseName) {
+      placeholder.style.display = 'block';
+      emptyMsg.style.display    = 'none';
+      statsEl.style.display     = 'none';
+      if (progressChart) { progressChart.destroy(); progressChart = null; }
+      return;
+    }
+
+    placeholder.style.display = 'none';
+
+    // Fetch sessions with entries for this exercise
+    const { data, error } = await sb
+      .from('workout_sessions')
+      .select('session_date, workout_entries!inner(weight, reps, exercise_name)')
+      .eq('workout_entries.exercise_name', exerciseName)
+      .order('session_date', { ascending: true });
+
+    if (error) { emptyMsg.style.display = 'block'; emptyMsg.textContent = error.message; return; }
+
+    // Aggregate per session date
+    progressData = [];
+    for (const session of (data || [])) {
+      const entries = (session.workout_entries || []).filter(e => e.weight);
+      if (!entries.length) continue;
+
+      const maxWeight = Math.max(...entries.map(e => e.weight));
+      const bestOrm   = Math.max(...entries.map(e =>
+        e.reps ? Math.round(e.weight * (1 + e.reps / 30)) : e.weight
+      ));
+      const volume = Math.round(entries.reduce((s, e) => s + e.weight * (e.reps || 1), 0));
+
+      progressData.push({ date: session.session_date, maxWeight, bestOrm, volume });
+    }
+
+    renderProgressChart();
+  }
+
+  function renderProgressChart() {
+    const emptyMsg = document.getElementById('progress-empty');
+    const statsEl  = document.getElementById('progress-stats');
+
+    if (!progressData.length) {
+      emptyMsg.style.display = 'block';
+      statsEl.style.display  = 'none';
+      if (progressChart) { progressChart.destroy(); progressChart = null; }
+      return;
+    }
+
+    emptyMsg.style.display = 'none';
+
+    // Stats
+    const allWeights = progressData.map(d => d.maxWeight);
+    const allOrms    = progressData.map(d => d.bestOrm);
+    const latest     = progressData[progressData.length - 1];
+    const unitLabel  = currentMetric === 'volume' ? 'lbs' : 'lbs';
+
+    statsEl.style.display = 'grid';
+    statsEl.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-val">${latest.maxWeight}</div>
+        <div class="stat-label">Latest Max (lbs)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${Math.max(...allWeights)}</div>
+        <div class="stat-label">All-Time Max (lbs)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${Math.max(...allOrms)}</div>
+        <div class="stat-label">Best Est. 1RM (lbs)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${progressData.length}</div>
+        <div class="stat-label">Sessions Logged</div>
+      </div>
+    `;
+
+    // Chart data
+    const labels  = progressData.map(d =>
+      new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    );
+    const keyMap  = { weight: 'maxWeight', orm: 'bestOrm', volume: 'volume' };
+    const yData   = progressData.map(d => d[keyMap[currentMetric]]);
+    const yLabel  = currentMetric === 'weight' ? 'Max Weight (lbs)'
+                  : currentMetric === 'orm'    ? 'Est. 1RM (lbs)'
+                  :                              'Volume (lbs)';
+
+    const ctx = document.getElementById('progress-chart').getContext('2d');
+    if (progressChart) progressChart.destroy();
+
+    progressChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: yLabel,
+          data: yData,
+          borderColor: '#ff5000',
+          backgroundColor: 'rgba(255,80,0,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: '#ff5000',
+          pointBorderColor: '#ff5000',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            borderColor: '#2a2a2a',
+            borderWidth: 1,
+            titleColor: '#f0ede8',
+            bodyColor: '#888',
+            padding: 10,
+            callbacks: { label: ctx => ` ${ctx.parsed.y} lbs` }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: '#141414' },
+            ticks: { color: '#555', font: { family: 'DM Sans', size: 11 } }
+          },
+          y: {
+            grid: { color: '#141414' },
+            ticks: { color: '#555', font: { family: 'DM Sans', size: 11 } },
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   // Set default session date to today
   document.getElementById('session-date').value = new Date().toISOString().slice(0, 10);
@@ -1639,6 +1925,7 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
     if (currentUser) {
       loadSavedPlans();
       loadHistory();
+      loadExerciseList();
     }
   });
 </script>
