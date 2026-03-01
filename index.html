@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Build Your Program — AI Fitness Coach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #f0ede8;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    .bg-texture {
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,80,0,0.06) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255,200,0,0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header { margin-bottom: 56px; }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #ff5000;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(56px, 10vw, 96px);
+      line-height: 0.9;
+      color: #f0ede8;
+      letter-spacing: 0.02em;
+    }
+
+    h1 span { color: #ff5000; }
+
+    .subtitle {
+      margin-top: 20px;
+      color: #888;
+      font-size: 15px;
+      font-weight: 300;
+      max-width: 420px;
+      line-height: 1.6;
+    }
+
+    /* API Key Banner */
+    .api-banner {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-left: 3px solid #ff5000;
+      border-radius: 2px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .api-banner label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #ff5000;
+      white-space: nowrap;
+    }
+
+    .api-banner input {
+      flex: 1;
+      min-width: 220px;
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 2px;
+      color: #f0ede8;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .api-banner input:focus { border-color: #ff5000; }
+
+    .api-hint {
+      font-size: 11px;
+      color: #444;
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .api-hint a { color: #ff5000; text-decoration: none; }
+    .api-hint a:hover { text-decoration: underline; }
+
+    /* Form */
+    .form-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 2px;
+      padding: 40px;
+      margin-bottom: 40px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    select, input[type="number"], input[type="text"], textarea {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 2px;
+      color: #f0ede8;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    select:focus, input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
+      border-color: #ff5000;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: #111; }
+
+    .btn {
+      background: #ff5000;
+      border: none;
+      border-radius: 2px;
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      padding: 16px 40px;
+      transition: background 0.2s, transform 0.1s;
+      width: 100%;
+    }
+
+    .btn:hover { background: #e04500; }
+    .btn:active { transform: scale(0.99); }
+    .btn:disabled { background: #333; color: #555; cursor: not-allowed; transform: none; }
+
+    /* Loading */
+    .loading {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      color: #666;
+      font-size: 13px;
+      padding: 24px 0;
+      justify-content: center;
+    }
+
+    .loading.visible { display: flex; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #222;
+      border-top-color: #ff5000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error {
+      background: #1a0a0a;
+      border: 1px solid #3d1a1a;
+      border-radius: 2px;
+      color: #ff6b6b;
+      font-size: 13px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .error.visible { display: block; }
+
+    /* Plan output */
+    #plan-output { display: none; }
+    #plan-output.visible { display: block; animation: fadeUp 0.4s ease both; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #ff5000;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #1e1e1e;
+    }
+
+    .plan-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      letter-spacing: 0.04em;
+      color: #f0ede8;
+      margin-bottom: 8px;
+    }
+
+    .plan-summary {
+      color: #888;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .days-grid { display: grid; gap: 12px; margin-bottom: 36px; }
+
+    .day-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 2px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .day-card:hover { border-color: #2e2e2e; }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .day-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+    }
+
+    .day-focus {
+      font-size: 12px;
+      color: #888;
+      font-weight: 300;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .day-toggle {
+      color: #444;
+      font-size: 18px;
+      transition: transform 0.2s, color 0.2s;
+    }
+
+    .day-toggle.open { transform: rotate(180deg); color: #ff5000; }
+
+    .day-body {
+      border-top: 1px solid #1a1a1a;
+      padding: 20px;
+      display: none;
+    }
+
+    .day-body.open { display: block; }
+
+    .exercise-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    .exercise-table th {
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #444;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1a1a1a;
+      font-weight: 600;
+    }
+
+    .exercise-table td {
+      padding: 10px 0;
+      border-bottom: 1px solid #141414;
+      color: #ccc;
+      vertical-align: top;
+    }
+
+    .exercise-table tr:last-child td { border-bottom: none; }
+    .exercise-name { color: #f0ede8; font-weight: 500; }
+
+    .notes-pill {
+      display: block;
+      font-size: 11px;
+      color: #555;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .cardio-block {
+      background: #0f0f0f;
+      border: 1px solid #1a1a1a;
+      border-left: 3px solid #ff5000;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      border-radius: 0 2px 2px 0;
+    }
+
+    .cardio-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .cardio-body { font-size: 13px; color: #888; line-height: 1.7; }
+
+    .tips-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .tip-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 2px;
+      padding: 16px;
+    }
+
+    .tip-icon { font-size: 20px; margin-bottom: 8px; }
+    .tip-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #ff5000;
+      margin-bottom: 4px;
+    }
+    .tip-text { font-size: 13px; color: #888; line-height: 1.6; }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .tips-grid { grid-template-columns: 1fr; }
+      .form-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-texture"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="eyebrow">AI Fitness Coach</div>
+    <h1>BUILD YOUR<br><span>PROGRAM</span></h1>
+    <p class="subtitle">Tell us your goals. We'll build a complete, periodized training plan — tailored to you.</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-banner">
+    <label for="api-key">Anthropic API Key</label>
+    <input type="password" id="api-key" placeholder="sk-ant-api03-..." />
+    <div class="api-hint">
+      Your key is never stored or sent anywhere except directly to Anthropic.
+      Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="goal">Primary Goal</label>
+        <select id="goal">
+          <option>Build Muscle</option>
+          <option>Lose Fat</option>
+          <option>Improve Strength</option>
+          <option>Increase Endurance</option>
+          <option>Athletic Performance</option>
+          <option>General Fitness</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="level">Fitness Level</label>
+        <select id="level">
+          <option>Beginner</option>
+          <option selected>Intermediate</option>
+          <option>Advanced</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="days">Days Per Week</label>
+        <select id="days">
+          <option>3</option>
+          <option selected>4</option>
+          <option>5</option>
+          <option>6</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="equipment">Available Equipment</label>
+        <select id="equipment">
+          <option>Full Gym</option>
+          <option>Dumbbells Only</option>
+          <option>Barbell & Rack</option>
+          <option>Bodyweight Only</option>
+          <option>Resistance Bands</option>
+          <option>Home Gym (Mixed)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="age">Age (optional)</label>
+        <input type="number" id="age" placeholder="e.g. 28" min="10" max="100" />
+      </div>
+
+      <div class="form-group">
+        <label for="limitations">Injuries / Limitations</label>
+        <input type="text" id="limitations" placeholder="e.g. bad lower back, no overhead pressing" />
+      </div>
+
+      <div class="form-group full">
+        <label for="notes">Additional Notes</label>
+        <textarea id="notes" placeholder="Any other preferences, schedule constraints, or goals..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn" id="generate-btn" onclick="generatePlan()">Generate My Workout Plan →</button>
+
+    <div class="error" id="error-box"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    Building your personalized program...
+  </div>
+
+  <!-- Plan Output -->
+  <div id="plan-output">
+    <div class="section-label">Your Program</div>
+    <div class="plan-title" id="plan-title"></div>
+    <div class="plan-summary" id="plan-summary"></div>
+
+    <div class="section-label">Weekly Schedule</div>
+    <div class="days-grid" id="days-grid"></div>
+
+    <div class="cardio-block" id="cardio-block" style="display:none">
+      <div class="cardio-title" id="cardio-title"></div>
+      <div class="cardio-body" id="cardio-body"></div>
+    </div>
+
+    <div class="tips-grid" id="tips-grid"></div>
+  </div>
+</div>
+
+<script>
+  async function generatePlan() {
+    const apiKey = document.getElementById('api-key').value.trim();
+    if (!apiKey) {
+      showError('Please enter your Anthropic API key above.');
+      return;
+    }
+
+    const goal       = document.getElementById('goal').value;
+    const level      = document.getElementById('level').value;
+    const days       = document.getElementById('days').value;
+    const equipment  = document.getElementById('equipment').value;
+    const age        = document.getElementById('age').value || 'Not specified';
+    const limitations = document.getElementById('limitations').value || 'None';
+    const notes      = document.getElementById('notes').value || 'None';
+
+    setLoading(true);
+    hideError();
+    hidePlan();
+
+    const prompt = `You are an elite personal trainer and strength & conditioning coach. Generate a complete, detailed, and science-backed workout plan based on:
+
+Goal: ${goal}
+Fitness Level: ${level}
+Days per Week: ${days}
+Equipment: ${equipment}
+Age: ${age}
+Injuries/Limitations: ${limitations}
+Additional Notes: ${notes}
+
+Respond ONLY with a valid JSON object. No markdown, no explanation, just raw JSON.
+
+Schema:
+{
+  "planTitle": "string",
+  "summary": "2-3 sentence overview of the program philosophy and approach",
+  "days": [
+    {
+      "dayName": "Day 1 – Monday",
+      "focus": "Push / Chest & Triceps",
+      "exercises": [
+        {
+          "name": "Barbell Bench Press",
+          "sets": "4",
+          "reps": "6-8",
+          "rest": "90s",
+          "notes": "Control the eccentric; stop 1 rep shy of failure"
+        }
+      ]
+    }
+  ],
+  "cardio": {
+    "title": "Cardio Protocol",
+    "description": "Detailed cardio recommendations including type, frequency, duration, intensity, and timing relative to lifting sessions"
+  },
+  "tips": [
+    { "icon": "🥗", "label": "Nutrition", "text": "Brief actionable nutrition tip" },
+    { "icon": "😴", "label": "Recovery", "text": "Brief recovery tip" },
+    { "icon": "📈", "label": "Progression", "text": "Brief progressive overload tip" },
+    { "icon": "💊", "label": "Supplements", "text": "Brief supplement recommendation" }
+  ]
+}
+
+Make the plan professional, specific, and tailored. Include warm-up and cool-down as exercises where appropriate. Rest days should still appear as entries with focus: "Active Recovery" and a short list of recommended mobility/stretching exercises.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+      const text = data.content.map(b => b.text || '').join('');
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse response. Try again.');
+      const plan = JSON.parse(jsonMatch[0]);
+
+      renderPlan(plan);
+    } catch (err) {
+      showError('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderPlan(plan) {
+    document.getElementById('plan-title').textContent = plan.planTitle || '';
+    document.getElementById('plan-summary').textContent = plan.summary || '';
+
+    // Days
+    const grid = document.getElementById('days-grid');
+    grid.innerHTML = '';
+    (plan.days || []).forEach((day, i) => {
+      const card = document.createElement('div');
+      card.className = 'day-card';
+
+      const rows = (day.exercises || []).map(ex => `
+        <tr>
+          <td>
+            <div class="exercise-name">${esc(ex.name)}</div>
+            ${ex.notes ? `<span class="notes-pill">${esc(ex.notes)}</span>` : ''}
+          </td>
+          <td>${esc(ex.sets || '—')}</td>
+          <td>${esc(ex.reps || '—')}</td>
+          <td>${esc(ex.rest || '—')}</td>
+        </tr>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="day-header" onclick="toggleDay(this)">
+          <div>
+            <div class="day-name">${esc(day.dayName)}</div>
+            <div class="day-focus">${esc(day.focus)}</div>
+          </div>
+          <div class="day-toggle ${i === 0 ? 'open' : ''}">▾</div>
+        </div>
+        <div class="day-body ${i === 0 ? 'open' : ''}">
+          <table class="exercise-table">
+            <thead>
+              <tr>
+                <th style="width:40%">Exercise</th>
+                <th>Sets</th>
+                <th>Reps</th>
+                <th>Rest</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    // Cardio
+    if (plan.cardio) {
+      document.getElementById('cardio-title').textContent = plan.cardio.title || 'Cardio Protocol';
+      document.getElementById('cardio-body').textContent = plan.cardio.description || '';
+      document.getElementById('cardio-block').style.display = 'block';
+    }
+
+    // Tips
+    const tipsGrid = document.getElementById('tips-grid');
+    tipsGrid.innerHTML = '';
+    (plan.tips || []).forEach(tip => {
+      const card = document.createElement('div');
+      card.className = 'tip-card';
+      card.innerHTML = `
+        <div class="tip-icon">${tip.icon || ''}</div>
+        <div class="tip-label">${esc(tip.label)}</div>
+        <div class="tip-text">${esc(tip.text)}</div>
+      `;
+      tipsGrid.appendChild(card);
+    });
+
+    document.getElementById('plan-output').classList.add('visible');
+    document.getElementById('plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function toggleDay(header) {
+    const body   = header.nextElementSibling;
+    const toggle = header.querySelector('.day-toggle');
+    body.classList.toggle('open');
+    toggle.classList.toggle('open');
+  }
+
+  function setLoading(on) {
+    document.getElementById('loading').classList.toggle('visible', on);
+    document.getElementById('generate-btn').disabled = on;
+    document.getElementById('generate-btn').textContent = on ? 'Generating Plan...' : 'Generate My Workout Plan →';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-box');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('error-box').classList.remove('visible');
+  }
+
+  function hidePlan() {
+    document.getElementById('plan-output').classList.remove('visible');
+    document.getElementById('cardio-block').style.display = 'none';
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
