@@ -7,6 +7,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ── Fill in your Supabase project details ──────────────────────────────
+    const SUPABASE_URL      = 'https://tumjismjllgzcyuvcznk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bWppc21qbGxnemN5dXZjem5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODMwNTAsImV4cCI6MjA4Nzk1OTA1MH0.qgqFhPr0holR8U39AodAmFHYvb_iIj3sdpKdXavCqAY';
+    // ───────────────────────────────────────────────────────────────────────
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -65,32 +76,36 @@
       line-height: 1.6;
     }
 
-    /* API Key Banner */
-    .api-banner {
+    /* ── Auth Section ─────────────────────────────────────────────────────── */
+    .auth-section { margin-bottom: 28px; }
+
+    .auth-panel, .user-panel {
       background: #111;
       border: 1px solid #2a2a2a;
       border-left: 3px solid #ff5000;
       border-radius: 2px;
-      padding: 16px 20px;
-      margin-bottom: 28px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
+      padding: 20px 24px;
     }
 
-    .api-banner label {
+    .auth-panel-title {
       font-size: 11px;
       font-weight: 600;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: #ff5000;
-      white-space: nowrap;
+      margin-bottom: 16px;
     }
 
-    .api-banner input {
+    .auth-fields {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .auth-fields input {
       flex: 1;
-      min-width: 220px;
+      min-width: 180px;
       background: #0a0a0a;
       border: 1px solid #222;
       border-radius: 2px;
@@ -102,19 +117,172 @@
       transition: border-color 0.2s;
     }
 
-    .api-banner input:focus { border-color: #ff5000; }
+    .auth-fields input:focus { border-color: #ff5000; }
 
-    .api-hint {
-      font-size: 11px;
+    .auth-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-auth {
+      background: #ff5000;
+      border: none;
+      border-radius: 2px;
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      padding: 10px 22px;
+      transition: background 0.2s;
+    }
+
+    .btn-auth:hover { background: #e04500; }
+
+    .btn-auth.secondary {
+      background: transparent;
+      border: 1px solid #333;
+      color: #888;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
+      padding: 9px 16px;
+    }
+
+    .btn-auth.secondary:hover { border-color: #555; color: #ccc; }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      border-radius: 2px;
+      color: #ccc;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 16px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-google:hover { border-color: #555; color: #fff; }
+
+    .btn-google svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .auth-msg {
+      font-size: 12px;
+      margin-top: 10px;
+      min-height: 16px;
+    }
+
+    .auth-msg.ok  { color: #4caf50; }
+    .auth-msg.err { color: #ff6b6b; }
+
+    /* Logged-in state */
+    .user-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .user-email {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .user-email strong { color: #f0ede8; }
+
+    .user-actions { display: flex; gap: 8px; }
+
+    /* ── Saved Plans Drawer ────────────────────────────────────────────────── */
+    .plans-drawer {
+      margin-top: 12px;
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .plans-drawer.open { display: block; }
+
+    .plans-drawer-header {
+      padding: 12px 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
       color: #444;
-      width: 100%;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .plans-list { padding: 8px 0; }
+
+    .plan-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      gap: 12px;
+      border-bottom: 1px solid #141414;
+      transition: background 0.15s;
+    }
+
+    .plan-item:last-child { border-bottom: none; }
+    .plan-item:hover { background: #161616; }
+
+    .plan-item-info { flex: 1; min-width: 0; }
+
+    .plan-item-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #f0ede8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .plan-item-date {
+      font-size: 11px;
+      color: #555;
       margin-top: 2px;
     }
 
-    .api-hint a { color: #ff5000; text-decoration: none; }
-    .api-hint a:hover { text-decoration: underline; }
+    .plan-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-    /* Form */
+    .btn-load, .btn-delete {
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 5px 12px;
+      text-transform: uppercase;
+      transition: background 0.15s;
+    }
+
+    .btn-load   { background: #1e1e1e; color: #ff5000; }
+    .btn-load:hover   { background: #2a2a2a; }
+    .btn-delete { background: #1a0a0a; color: #663333; }
+    .btn-delete:hover { background: #2a1010; color: #ff6b6b; }
+
+    .plans-empty {
+      padding: 24px 20px;
+      font-size: 13px;
+      color: #444;
+      text-align: center;
+    }
+
+    /* ── Form ─────────────────────────────────────────────────────────────── */
     .form-card {
       background: #111;
       border: 1px solid #1e1e1e;
@@ -146,7 +314,7 @@
       color: #666;
     }
 
-    select, input[type="number"], input[type="text"], textarea {
+    select, input[type="number"], input[type="text"], input[type="password"], textarea {
       background: #0a0a0a;
       border: 1px solid #222;
       border-radius: 2px;
@@ -159,7 +327,8 @@
       width: 100%;
     }
 
-    select:focus, input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
+    select:focus, input[type="number"]:focus, input[type="text"]:focus,
+    input[type="password"]:focus, textarea:focus {
       border-color: #ff5000;
     }
 
@@ -184,7 +353,7 @@
     .btn:active { transform: scale(0.99); }
     .btn:disabled { background: #333; color: #555; cursor: not-allowed; transform: none; }
 
-    /* Loading */
+    /* ── Loading ──────────────────────────────────────────────────────────── */
     .loading {
       display: none;
       align-items: center;
@@ -208,7 +377,7 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Error */
+    /* ── Error ────────────────────────────────────────────────────────────── */
     .error {
       background: #1a0a0a;
       border: 1px solid #3d1a1a;
@@ -222,7 +391,7 @@
 
     .error.visible { display: block; }
 
-    /* Plan output */
+    /* ── Plan output ──────────────────────────────────────────────────────── */
     #plan-output { display: none; }
     #plan-output.visible { display: block; animation: fadeUp 0.4s ease both; }
 
@@ -389,6 +558,36 @@
     }
     .tip-text { font-size: 13px; color: #888; line-height: 1.6; }
 
+    /* Save plan button */
+    .btn-save-plan {
+      display: none;
+      margin-top: 28px;
+      background: transparent;
+      border: 1px solid #ff5000;
+      border-radius: 2px;
+      color: #ff5000;
+      cursor: pointer;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      padding: 14px 40px;
+      transition: background 0.2s, color 0.2s;
+      width: 100%;
+    }
+
+    .btn-save-plan:hover { background: #ff5000; color: #fff; }
+    .btn-save-plan.logged-in { display: block; }
+
+    .save-msg {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+      min-height: 16px;
+    }
+
+    .save-msg.ok  { color: #4caf50; }
+    .save-msg.err { color: #ff6b6b; }
+
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .tips-grid { grid-template-columns: 1fr; }
@@ -408,19 +607,58 @@
     <p class="subtitle">Tell us your goals. We'll build a complete, periodized training plan — tailored to you.</p>
   </div>
 
-  <!-- API Key -->
-  <div class="api-banner">
-    <label for="api-key">Anthropic API Key</label>
-    <input type="password" id="api-key" placeholder="sk-ant-api03-..." />
-    <div class="api-hint">
-      Your key is never stored or sent anywhere except directly to Anthropic.
-      Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+  <!-- Auth Section -->
+  <div class="auth-section" id="auth-section">
+    <!-- Logged-out panel -->
+    <div id="auth-logged-out">
+      <div class="auth-panel">
+        <div class="auth-panel-title">Sign In / Create Account</div>
+        <div class="auth-fields">
+          <input type="email" id="auth-email" placeholder="Email address" autocomplete="email" />
+          <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+        </div>
+        <div class="auth-btns">
+          <button class="btn-auth" onclick="signIn()">Sign In</button>
+          <button class="btn-auth secondary" onclick="signUp()">Create Account</button>
+          <button class="btn-google" onclick="signInGoogle()">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+        </div>
+        <div class="auth-msg" id="auth-msg"></div>
+      </div>
+    </div>
+
+    <!-- Logged-in panel -->
+    <div id="auth-logged-in" style="display:none">
+      <div class="user-panel">
+        <div class="user-email">Signed in as <strong id="user-email-display"></strong></div>
+        <div class="user-actions">
+          <button class="btn-auth secondary" onclick="togglePlansDrawer()">My Saved Plans</button>
+          <button class="btn-auth secondary" onclick="signOut()">Sign Out</button>
+        </div>
+      </div>
+      <div class="plans-drawer" id="plans-drawer">
+        <div class="plans-drawer-header">Saved Programs</div>
+        <div class="plans-list" id="plans-list"></div>
+      </div>
     </div>
   </div>
 
   <!-- Form -->
   <div class="form-card">
     <div class="form-grid">
+      <!-- Anthropic API Key -->
+      <div class="form-group full">
+        <label for="api-key">Anthropic API Key</label>
+        <input type="password" id="api-key" placeholder="sk-ant-api03-..." autocomplete="off" />
+      </div>
+
       <div class="form-group">
         <label for="goal">Primary Goal</label>
         <select id="goal">
@@ -457,7 +695,7 @@
         <select id="equipment">
           <option>Full Gym</option>
           <option>Dumbbells Only</option>
-          <option>Barbell & Rack</option>
+          <option>Barbell &amp; Rack</option>
           <option>Bodyweight Only</option>
           <option>Resistance Bands</option>
           <option>Home Gym (Mixed)</option>
@@ -506,24 +744,202 @@
     </div>
 
     <div class="tips-grid" id="tips-grid"></div>
+
+    <button class="btn-save-plan" id="save-plan-btn" onclick="savePlan()">Save This Plan →</button>
+    <div class="save-msg" id="save-msg"></div>
   </div>
 </div>
 
 <script>
-  async function generatePlan() {
-    const apiKey = document.getElementById('api-key').value.trim();
-    if (!apiKey) {
-      showError('Please enter your Anthropic API key above.');
+  // ── State ────────────────────────────────────────────────────────────────
+  let currentUser = null;
+  let currentPlan = null;   // last rendered plan JSON
+  let lastFormInputs = {};  // form values used to generate the plan
+
+  // ── Auth UI ──────────────────────────────────────────────────────────────
+  function renderAuthUI() {
+    const loggedOut = document.getElementById('auth-logged-out');
+    const loggedIn  = document.getElementById('auth-logged-in');
+    const saveBtn   = document.getElementById('save-plan-btn');
+
+    if (currentUser) {
+      loggedOut.style.display = 'none';
+      loggedIn.style.display  = 'block';
+      document.getElementById('user-email-display').textContent = currentUser.email;
+      if (currentPlan) saveBtn.classList.add('logged-in');
+    } else {
+      loggedOut.style.display = 'block';
+      loggedIn.style.display  = 'none';
+      saveBtn.classList.remove('logged-in');
+      // Close plans drawer
+      document.getElementById('plans-drawer').classList.remove('open');
+    }
+  }
+
+  function setAuthMsg(msg, type) {
+    const el = document.getElementById('auth-msg');
+    el.textContent = msg;
+    el.className = 'auth-msg ' + (type || '');
+  }
+
+  async function signIn() {
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    if (!email || !password) { setAuthMsg('Enter your email and password.', 'err'); return; }
+
+    setAuthMsg('Signing in…');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) setAuthMsg(error.message, 'err');
+    else setAuthMsg('');
+  }
+
+  async function signUp() {
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    if (!email || !password) { setAuthMsg('Enter an email and password to create an account.', 'err'); return; }
+    if (password.length < 6) { setAuthMsg('Password must be at least 6 characters.', 'err'); return; }
+
+    setAuthMsg('Creating account…');
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) setAuthMsg(error.message, 'err');
+    else setAuthMsg('Account created! Check your email to confirm, then sign in.', 'ok');
+  }
+
+  async function signInGoogle() {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.href }
+    });
+    if (error) setAuthMsg(error.message, 'err');
+  }
+
+  async function signOut() {
+    await sb.auth.signOut();
+  }
+
+  // ── Saved Plans ──────────────────────────────────────────────────────────
+  function togglePlansDrawer() {
+    const drawer = document.getElementById('plans-drawer');
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) loadSavedPlans();
+  }
+
+  async function loadSavedPlans() {
+    const list = document.getElementById('plans-list');
+    list.innerHTML = '<div class="plans-empty">Loading…</div>';
+
+    const { data, error } = await sb
+      .from('workout_plans')
+      .select('id, plan_title, created_at, plan_data, form_inputs')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      list.innerHTML = `<div class="plans-empty" style="color:#ff6b6b">${esc(error.message)}</div>`;
       return;
     }
 
-    const goal       = document.getElementById('goal').value;
-    const level      = document.getElementById('level').value;
-    const days       = document.getElementById('days').value;
-    const equipment  = document.getElementById('equipment').value;
-    const age        = document.getElementById('age').value || 'Not specified';
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="plans-empty">No saved plans yet. Generate a plan and save it!</div>';
+      return;
+    }
+
+    list.innerHTML = data.map(p => `
+      <div class="plan-item">
+        <div class="plan-item-info">
+          <div class="plan-item-title">${esc(p.plan_title)}</div>
+          <div class="plan-item-date">${new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+        </div>
+        <div class="plan-item-actions">
+          <button class="btn-load"   onclick="loadPlan(${JSON.stringify(esc(p.id))})">Load</button>
+          <button class="btn-delete" onclick="deletePlan(${JSON.stringify(esc(p.id))}, this)">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Store data for lookup by id
+    list._data = data;
+  }
+
+  async function loadPlan(id) {
+    const list = document.getElementById('plans-list');
+    const entry = (list._data || []).find(p => p.id === id);
+    if (!entry) return;
+
+    // Restore form inputs if available
+    if (entry.form_inputs) {
+      const f = entry.form_inputs;
+      ['goal','level','days','equipment'].forEach(k => {
+        const el = document.getElementById(k);
+        if (el && f[k]) el.value = f[k];
+      });
+      ['age','limitations','notes'].forEach(k => {
+        const el = document.getElementById(k);
+        if (el && f[k]) el.value = f[k];
+      });
+    }
+
+    renderPlan(entry.plan_data);
+    document.getElementById('plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function deletePlan(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    const { error } = await sb.from('workout_plans').delete().eq('id', id);
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+      alert('Delete failed: ' + error.message);
+    } else {
+      loadSavedPlans();
+    }
+  }
+
+  async function savePlan() {
+    if (!currentUser || !currentPlan) return;
+
+    const btn = document.getElementById('save-plan-btn');
+    const msg = document.getElementById('save-msg');
+    btn.disabled = true;
+    msg.className = 'save-msg';
+    msg.textContent = 'Saving…';
+
+    const { error } = await sb.from('workout_plans').insert({
+      user_id:     currentUser.id,
+      plan_title:  currentPlan.planTitle || 'Untitled Plan',
+      plan_data:   currentPlan,
+      form_inputs: lastFormInputs
+    });
+
+    btn.disabled = false;
+    if (error) {
+      msg.className = 'save-msg err';
+      msg.textContent = 'Save failed: ' + error.message;
+    } else {
+      msg.className = 'save-msg ok';
+      msg.textContent = 'Plan saved!';
+      setTimeout(() => { msg.textContent = ''; }, 3000);
+    }
+  }
+
+  // ── Plan Generation ──────────────────────────────────────────────────────
+  async function generatePlan() {
+    const apiKey = document.getElementById('api-key').value.trim();
+    if (!apiKey) {
+      showError('Please enter your Anthropic API key.');
+      return;
+    }
+
+    const goal        = document.getElementById('goal').value;
+    const level       = document.getElementById('level').value;
+    const days        = document.getElementById('days').value;
+    const equipment   = document.getElementById('equipment').value;
+    const age         = document.getElementById('age').value || 'Not specified';
     const limitations = document.getElementById('limitations').value || 'None';
-    const notes      = document.getElementById('notes').value || 'None';
+    const notes       = document.getElementById('notes').value || 'None';
+
+    lastFormInputs = { goal, level, days, equipment, age, limitations, notes };
 
     setLoading(true);
     hideError();
@@ -608,7 +1024,9 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
   }
 
   function renderPlan(plan) {
-    document.getElementById('plan-title').textContent = plan.planTitle || '';
+    currentPlan = plan;
+
+    document.getElementById('plan-title').textContent   = plan.planTitle || '';
     document.getElementById('plan-summary').textContent = plan.summary || '';
 
     // Days
@@ -658,7 +1076,7 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
     // Cardio
     if (plan.cardio) {
       document.getElementById('cardio-title').textContent = plan.cardio.title || 'Cardio Protocol';
-      document.getElementById('cardio-body').textContent = plan.cardio.description || '';
+      document.getElementById('cardio-body').textContent  = plan.cardio.description || '';
       document.getElementById('cardio-block').style.display = 'block';
     }
 
@@ -675,6 +1093,11 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
       `;
       tipsGrid.appendChild(card);
     });
+
+    // Save button visibility
+    const saveBtn = document.getElementById('save-plan-btn');
+    if (currentUser) saveBtn.classList.add('logged-in');
+    document.getElementById('save-msg').textContent = '';
 
     document.getElementById('plan-output').classList.add('visible');
     document.getElementById('plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -715,6 +1138,12 @@ Make the plan professional, specific, and tailored. Include warm-up and cool-dow
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  sb.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user ?? null;
+    renderAuthUI();
+  });
 </script>
 </body>
 </html>
