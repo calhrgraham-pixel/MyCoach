@@ -832,6 +832,24 @@
 
     .chart-wrap { position: relative; height: 300px; }
 
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    .site-footer {
+      text-align: center;
+      padding: 40px 24px 48px;
+      border-top: 1px solid #141414;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-logo {
+      height: 36px;
+      width: auto;
+      opacity: 0.35;
+      transition: opacity 0.2s;
+    }
+
+    .footer-logo:hover { opacity: 0.6; }
+
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .tips-grid { grid-template-columns: 1fr; }
@@ -1083,6 +1101,11 @@
 
   </div>
 </div>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <img src="personal logo white.png" alt="Personal logo" class="footer-logo" />
+</footer>
 
 <script>
   // ── State ────────────────────────────────────────────────────────────────
